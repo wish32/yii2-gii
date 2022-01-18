@@ -283,14 +283,14 @@ class Generator extends \yii\gii\Generator
                 $dropDownOptions[$enumValue] = Inflector::humanize($enumValue);
             }
             return "\$form->field(\$model, '$attribute')->dropDownList("
-                . preg_replace("/\n\s*/", ' ', VarDumper::export($dropDownOptions)).", ['prompt' => ''])";
+                . preg_replace("/\n\s*/", ' ', VarDumper::export($dropDownOptions)).", ['prompt' => '', 'class'=>'form-control form-control-lg form-control-solid'])";
         }
 
         if ($column->phpType !== 'string' || $column->size === null) {
-            return "\$form->field(\$model, '$attribute')->$input()";
+            return "\$form->field(\$model, '$attribute')->$input(['placeholder'=>'', 'class'=>'form-control form-control-lg form-control-solid'])";
         }
 
-        return "\$form->field(\$model, '$attribute')->$input(['maxlength' => true])";
+        return "\$form->field(\$model, '$attribute')->$input(['maxlength' => true,'placeholder'=>'', 'class'=>'form-control form-control-lg form-control-solid'])";
     }
 
     /**
@@ -310,7 +310,7 @@ class Generator extends \yii\gii\Generator
             return "\$form->field(\$model, '$attribute')->checkbox()";
         }
 
-        return "\$form->field(\$model, '$attribute')";
+        return "\$form->field(\$model, '$attribute')->textInput(['class'=>'form-control form-control-lg'])";
     }
 
     /**

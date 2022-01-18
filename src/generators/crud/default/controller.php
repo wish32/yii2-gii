@@ -23,26 +23,28 @@ $pks = $class::primaryKey();
 $urlParams = $generator->generateUrlParams();
 $actionParams = $generator->generateActionParams();
 $actionParamComments = $generator->generateActionParamComments();
+$searchAttributes = $generator->getSearchAttributes();
 
 echo "<?php\n";
 ?>
 
 namespace <?= StringHelper::dirname(ltrim($generator->controllerClass, '\\')) ?>;
 
+use Yii;
 use <?= ltrim($generator->modelClass, '\\') ?>;
 <?php if (!empty($generator->searchModelClass)): ?>
 use <?= ltrim($generator->searchModelClass, '\\') . (isset($searchModelAlias) ? " as $searchModelAlias" : "") ?>;
 <?php else: ?>
 use yii\data\ActiveDataProvider;
 <?php endif; ?>
-use <?= ltrim($generator->baseControllerClass, '\\') ?>;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\helpers\Url;
 
 /**
  * <?= $controllerClass ?> implements the CRUD actions for <?= $modelClass ?> model.
  */
-class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->baseControllerClass) . "\n" ?>
+class <?= $controllerClass ?> extends \common\frontend\FrontendController
 {
     /**
      * @inheritDoc
@@ -72,6 +74,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
 <?php if (!empty($generator->searchModelClass)): ?>
         $searchModel = new <?= isset($searchModelAlias) ? $searchModelAlias : $searchModelClass ?>();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $this->searchModel = $searchModel;
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -108,6 +111,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionView(<?= $actionParams ?>)
     {
+        $this->actionBarBtns = ['page'=>'view', 'model_id'=>$id];
         return $this->render('view', [
             'model' => $this->findModel(<?= $actionParams ?>),
         ]);
@@ -120,11 +124,12 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionCreate()
     {
+        $this->layout = false;
         $model = new <?= $modelClass ?>();
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', <?= $urlParams ?>]);
+                Yii::$app->session->setFlash('success', Yii::t('app', 'Create successfully!'));
             }
         } else {
             $model->loadDefaultValues();
@@ -144,10 +149,16 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionUpdate(<?= $actionParams ?>)
     {
+        $this->layout = false;
         $model = $this->findModel(<?= $actionParams ?>);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', <?= $urlParams ?>]);
+        if ( $this->request->isPost ) {
+            $model->load($this->request->post());
+            if ($model->save()) {
+                Yii::$app->session->setFlash('success', Yii::t('app', 'Saved successfully!'));
+            }else{
+                Yii::$app->session->setFlash('error', Yii::t('app', 'Saved failed!') . $model->getModelError());
+            }
         }
 
         return $this->render('update', [
@@ -164,9 +175,25 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionDelete(<?= $actionParams ?>)
     {
-        $this->findModel(<?= $actionParams ?>)->delete();
+        $ids = is_numeric($id)?[$id]:json_decode($id);
+        $result = 0;//删除记录的条数
 
-        return $this->redirect(['index']);
+        if( is_array($ids) && count($ids)>0 ){
+<?php   if( in_array('is_deleted', $searchAttributes) ):?>
+            $result = <?= $modelClass ?>::updateAll(['is_deleted'=>1], ['in', 'id', $ids]);<?php 
+        else: ?>
+            $result = <?= $modelClass ?>::deleteAll(['in', 'id', $ids]);<?php 
+        endif; ?> 
+        }
+        if(Yii::$app->request->isPost){
+            if($result){
+                $this->echoJson(1, Yii::t('app','Deleted successfully!'), ['redirect_url'=>Url::toRoute('index')]);
+            }else{
+                $this->echoJson(0, Yii::t('app','Delete failed!'));
+            }
+        }else{
+            return $this->redirect(['index']);
+        }
     }
 
     /**

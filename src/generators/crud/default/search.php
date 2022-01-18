@@ -68,6 +68,23 @@ class <?= $searchModelClass ?> extends <?= isset($modelAlias) ? $modelAlias : $m
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+<?php 
+            if( in_array('id', $searchAttributes) ):?>
+            'sort' => [
+                'defaultOrder' => [
+                    'id' => SORT_DESC,            
+                ]
+            ],<?php 
+            else:
+            ?>
+//            'sort' => [
+//                'defaultOrder' => [
+//                    'id' => SORT_DESC,            
+//                ]
+//            ],
+<?php
+            endif;
+            ?> 
         ]);
 
         $this->load($params);
